@@ -71,4 +71,4 @@ jobs:
           context: ./Lab_8/env_416039
           file: ./Lab_8/env_416039/dockerfile
           push: true
-          tags: ${{ secrets.DOCKER_HUB_USERNAME_416039}}/repo_416039:latest
+          tags: ${{ secrets.DOCKER_HUB_USERNAME_416039}}/devops2025:latest
