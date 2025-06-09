@@ -17,193 +17,143 @@ Skopiowałam token i zapisałam lokalnie.
 
 ### **4. Utworzenie sekretu GitHub**
 
-#### 4.1 Przejście do ustawień repozytorium > Settings > Secrets and variables > Actions
 
-Utworzono dwa sekrety:
+Utworzyłam dwa sekrety (token i username):
 
-* `DOCKER_USERNAME_416645`
-* `DOCKER_PASSWORD_416645`
+ `DOCKER_HUB_416039`,
+ `DOCKER_HUB_USERNAME_416039`
 
-![image](obrazy/Image10.png)
+![zdj](img/image.png)
 
-## **Krok 4: Utworzenie środowiska roboczego**
+### **5. Utworzenie środowiska roboczego**
 
-### 4.1 Skopiowanie folderu `env_00000` do nowego folderu
 
-```bash
-cp -r env_00000 env_416645
-```
+### **6. Konfiguracja GitHub Actions**
+- Utworzenie 3 jobow
 
-![image](obrazy/Image11.png)
-
-## **Krok 5: Konfiguracja GitHub Actions**
-
-### 5.1 Stworzenie pliku `.github/workflows/lab8.yml`
-
+Kod pipeline:
 ```yaml
-name: lab_8_416645
-
+name: lab_8_416039
 on:
   push:
     branches:
-      - Lab8/416645
-    
+      - lab8/416039
 jobs:
   unit_test:
     runs-on: ubuntu-latest
-    
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v2
-
-    - name: Set up Python
-      uses: actions/setup-python@v2
-      with:
-        python-version: '3.11'
-
-    - name: Install libs for testing
-      run: |
-        pip  install pytest 
-    
-    - name: prepare environemnt 
-      run: |
-         cd ./Lab_8/env_416645 && python -m pip install -r requirements.txt
-    - name: Run test
-      run: |
-        cd ./Lab_8/env_416645/main && pytest calculator_test.py
-  function_test:
+      - name: Checkout code
+        uses: actions/checkout@v2
+      - name: Set up Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: "3.11"
+      - name: Install libs for testing
+        run: |
+          pip  install pytest 
+      - name: prepare environemnt
+        run: |
+          cd ./Lab_8/env_416039 && python -m pip install -r requirements.txt
+      - name: Run test
+        run: |
+          cd ./Lab_8/env_416039/main && pytest calculator_test.py
+  functional_test:
     runs-on: ubuntu-latest
     needs: unit_test
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
-
       - name: Set up Python
         uses: actions/setup-python@v2
         with:
-          python-version: '3.11'
-
+          python-version: "3.11"
       - name: Install libs for testing
         run: |
-          pip install pytest 
-
-      - name: prepare environemnt 
+          pip  install pytest 
+      - name: prepare environemnt
         run: |
-           cd ./Lab_8/env_416645 && python -m pip install -r requirements.txt
-
+          cd ./Lab_8/env_416039 && python -m pip install -r requirements.txt
       - name: Run app
         run: |
-          cd ./Lab_8/env_416645/main && nohup python app.py &
-
-      - name: Wait for app to start
+          cd ./Lab_8/env_416039/main && nohup python app.py &
+      - name: Wait for app
         run: |
           sleep 10
-
       - name: Run test
         run: |
-          cd ./Lab_8/env_416645/main && pytest app_test.py
+          cd ./Lab_8/env_416039/main && pytest app_test.py
   deployment:
-    needs: function_test
     runs-on: ubuntu-latest
+    needs: functional_test
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v2
+      - name: Checkout code
+        uses: actions/checkout@v2
+      - name: Login to DockerHub
+        uses: docker/login-action@v1
+        with:
+          username: ${{ secrets.DOCKER_HUB_USERNAME_416039 }}
+          password: ${{ secrets.DOCKER_HUB_416039 }}
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+        with:
+          context: ./Lab_8/env_416039
+          file: ./Lab_8/env_416039/dockerfile
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          context: ./Lab_8/env_416039
+          file: ./Lab_8/env_416039/dockerfile
+          push: true
+          tags: ${{ secrets.DOCKER_HUB_USERNAME_416039}}/devops2025:latest
 
-    - name: Login to DockerHub
-      uses: docker/login-action@v1
-      with:
-        username: ${{ secrets.DOCKER__LOGIN_416645 }}
-        password: ${{ secrets.DOCKER_PASSWORD_416645 }}
-
-    - name: Set up Docker Buildx
-      uses: docker/setup-buildx-action@v1
-      with:
-        context: ./Lab_8/env_416645
-        file: ./Lab_8/env_416645/dockerfile
-
-    - name: Build and push Docker Image
-      uses: docker/build-push-action@v2
-      with:
-        context: ./Lab_8/env_416645
-        file: ./Lab_8/env_416645/dockerfile
-        push: true
-        tags: ${{ secrets.DOCKER_LOGIN_416645 }}/devops_416645:latest
 ```
 
-![image](obrazy/Image12.png)
+Błędy w pierwszych testach: 
+![zdj](img/zdj3.png)
 
-### 5.2 Commit i push zmian
+Żeby test przeszedł pomyślnie należało dodać biblioteki do `requirements.txt`.
+![zdj](img/zdj4.png)
 
-```bash
-git add .
-git commit -m "Poprawa pliku yml"
-git push origin Lab8/416645
-```
-
-![image](obrazy/Image13.png)
-
-Aby test przeszedł pomyślnie należało dodać biblioteki do `requirements.txt`.
-
-![image](obrazy/Image14.png)
-
-## **Krok 6: Naprawa błędów w testach funkcjonalnych**
-
-Po nieudanym teście funkcjonalnym naprawiono błędy w plikach `.py`.
-Ponowny push uruchomił workflow i zakończył się sukcesem.
-
-![image](obrazy/Image15.png)
+Obraz widoczny w Docker Hub:
+![zdj](img/zdj5.png)
 
 
-## **Krok 7: Testowanie obrazu lokalnie**
 
-Obraz został utworzony na repozytorium Docker.
 
-![image](obrazy/Image16.png)
 
-### 7.1 Logowanie do Docker Huba
 
-```bash
-docker login
-```
+### **7. Test obrazu**
 
-![image](obrazy/Image17.png)
+- Logowanie do Docker Huba
 
-### 7.2 Pobranie i uruchomienie obrazu
+![zdj](img/zdj6.png)
 
-```bash
-docker pull sonsku/devops_416645
-docker run -d -p 5000:5000 sonsku/devops_416645
-```
+- pobranie obrazu
 
-![image](obrazy/Image18.png)
-![image](obrazy/Image19.png)
+`docker pull kataszynka/devops2025 `
 
-### 7.3 Uruchomienie lokalnych testów
+- Uruchomienie kontenera
 
-```bash
-cd Lab_8/env_416645
-pytest function_test.py
-```
 
-![image](obrazy/Image20.png)
 
 Wszystkie testy zakończyły się sukcesem.
 
-## **Tematy dodatkowe**
+### **8. Tematy dodatkowe**
 
-### Dlaczego deployment po testach?
+- Dlaczego istotne jest wykonywanie deploymentu po testach a nie przed?
 
-Wdrażanie po testach zapewnia, że do repozytorium trafi jedynie **działający i przetestowany kod**. Zapobiega to publikacji błędnych obrazów.
+Deploy po testach chroni przed wdrażaniem błędnego kodu na produkcję i minimalizuje ryzyko awarii.
 
-### Czym różnią się testy funkcjonalne od jednostkowych?
+- Czym szczególnym różniły się testy funkcjonalne od unit testów?
 
-* **Unit testy** sprawdzają pojedyncze funkcje (np. dodawanie).
-* **Funkcjonalne** – testują aplikację jako całość, np. pełen request HTTP.
+Unit testy sprawdzają pojedyncze funkcje bez zależności, a testy funkcjonalne weryfikują działanie całych funkcji aplikacji z użyciem środowiska.
 
-### Dlaczego `RUN pip install -r requirements.txt` w osobnej linii?
+- Dlaczego dobrą praktyką jest instalowanie requirementsów w oddzielnej komendzie RUN (w dockerfile)?
 
-Umożliwia **cache'owanie** warstwy z zależnościami – budowa obrazu jest szybsza, jeśli kod się zmieni, ale zależności nie.
+Dzięki osobnemu RUN Docker może cache’ować instalację zależności i szybciej budować obrazy po zmianach w kodzie.
 
-### Dlaczego używać sekretów?
+- Dlaczego należy korzystać z przygotowanych magazynów haseł?
 
-Sekrety chronią **wrażliwe dane** (loginy, hasła, tokeny) – nie są widoczne w kodzie i są bezpiecznie szyfrowane przez GitHub Actions.
+Magazyny haseł pozwalają bezpiecznie przechowywać dane wrażliwe i chronią je przed przypadkowym ujawnieniem w kodzie.
